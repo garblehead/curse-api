@@ -22,9 +22,8 @@ headers = ['User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:72.0) Gecko/20100101 
 
 class CurseModInfo:
 	def __init__(self):
-		self.filename = "string.txt"
-		self.downloadurl = "http://example.invalid/"
-		self.fileid = "string"
+		self.filename = None
+		self.fileid = None
 		self.stability = None
 		self.dependencies = None
 
@@ -37,7 +36,7 @@ class CurseMod:
 # internal func
 # downloads a file to a byte stream
 # contains workarounds for cloudflare fuckery
-def DownloadFile(url):
+def __file_dl(url):
 	page = io.BytesIO()
 	page_hd = io.BytesIO()
 	c = pycurl.Curl()
@@ -61,8 +60,7 @@ def DownloadFile(url):
 				raise Exception("Unknown Content-Encoding")
 	return page_uc
 
-# testing please ignore
-def LocalFile():
+def __file_local():
 	fp = io.open(None, "rb")
 	data = fp.read()
 	fp.close()
@@ -70,7 +68,7 @@ def LocalFile():
 
 # internal func
 # turn a bytestream to a stringio file with unix line endings
-def FakeFile(string):
+def __file_fake(string):
 	return io.StringIO(string.replace(b'\r\n', b'\n').decode('utf-8'))
 
 # more internals
@@ -89,33 +87,37 @@ def __get_mod_from_url(url):
 
 # returns CurseModInfo with more details, like accurate filename and dep info
 def GetModFileInfo(game, category, mod, fileid):
-	url = "https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/file/"+fileid
+	url = "https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/files/"+fileid
 	info = CurseModInfo()
-	#p = LocalFile()
-	p = DownloadFile(url)
+	p = __file_dl(url)
 	parser = etree.HTMLParser()
-	tree = etree.parse(FakeFile(p), parser)
-	info.downloadurl = "https://www.curseforge.com"+game+"/"+category+"/"+mod+"/download"+fileid
+	tree = etree.parse(__file_fake(p), parser)
 	info.fileid = fileid
 	# quite a fuzzy match
-	infohtml = tree.xpath("//article[contains(@class, 'box')]")[0]
-	e = infohtml[0][0][0][0][0].text
-	info.stability = __stability_set(e)
-	info.filename = infohtml[1][0][1].text
-	info.dependencies = []
-	dephtml = tree.xpath("//section[contains(@class, 'items-start')]")
-	# find the dependency info
-	i = 0
-	for f in dephtml:
-		if not(len(dephtml[i])):
+	try:
+		infohtml = tree.xpath("//article[contains(@class, 'box')]")[0]
+		e = infohtml[0][0][0][0][0].text
+		info.stability = __stability_set(e)
+		info.filename = infohtml[1][0][1].text
+		info.dependencies = []
+		dephtml = tree.xpath("//section[contains(@class, 'items-start')]")
+		# find the dependency info
+		i = 0
+		deplist = None
+		for f in dephtml:
+			if not(len(dephtml[i])):
+				i=i+1
+				break
+			if(dephtml[i][0].text == "Required Dependency"):
+				deplist = dephtml[i]
+				break
 			i=i+1
-			break
-		if(dephtml[i][0].text == "Required Dependency"):
-			deplist = dephtml[i]
-			break
-		i=i+1
-	for dep in deplist[1]:
-		info.dependencies += [__get_mod_from_url(dep[0][1][0][0].attrib.get("href"))]
+		if(deplist is not None):
+			for dep in deplist[1]:
+				info.dependencies += [__get_mod_from_url(dep[0][1][0][0].attrib.get("href"))]
+	except:
+		print(etree.tostring(tree).decode('utf-8'))
+		raise
 	return info
 
 # returns a list of potential mod downloads, as an array of CurseModIInfo
@@ -124,10 +126,9 @@ def GetModList(game, category, mod, versions=None):
 	arr = []
 	if versions:
 		url += "?filter-game-version="+quote(versions)
-	#p = LocalFile()
-	p = DownloadFile(url)
+	p = __file_dl(url)
 	parser = etree.HTMLParser()
-	tree = etree.parse(FakeFile(p), parser)
+	tree = etree.parse(__file_fake(p), parser)
 	# TODO: gracefully handle projects without files
 	filelist = tree.xpath("//table[contains(@class, 'project-file-listing')]")[0].find('tbody')
 	i = 0
@@ -149,9 +150,9 @@ def GetDependencies(game, category, mod, deptype=None):
 	if deptype:
 		url += "?filter-related-dependencies="+deptype
 	arr = []
-	p = DownloadFile(url)
+	p = __file_dl(url)
 	parser = etree.HTMLParser()
-	tree = etree.parse(FakeFile(p), parser)
+	tree = etree.parse(__file_fake(p), parser)
 	projlist = tree.xpath("//ul[contains(@class, 'project-listing')]")
 	if("no-results" in projlist[0][0].attrib.get("class")): return arr
 	i = 0
@@ -162,7 +163,8 @@ def GetDependencies(game, category, mod, deptype=None):
 	return arr
 
 # returns mod file as bytes
-def DownloadMod(url):
-	DownloadFile(url)
-	file = DownloadFile(url+"/file")
+def DownloadMod(game, category, mod, fileid):
+	url="https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/download"+fileid
+	__file_dl(url)
+	file = __file_dl(url+"/file")
 	return file
