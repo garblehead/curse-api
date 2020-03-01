@@ -33,6 +33,13 @@ class CurseMod:
 		self.game = "nada"
 		self.category = "null"
 
+class CurseVersion:
+	def __init__(self):
+		self.name = None
+		self.id = None
+		self.typename = None
+		self.typeid = None
+
 # internal func
 # downloads a file to a byte stream
 # contains workarounds for cloudflare fuckery
@@ -141,6 +148,30 @@ def GetModList(game, category, mod, versions=None):
 		e = file[1][0].text #donot trust, no file extension typically
 		arr[i].filename = e
 		arr[i].downloadlink ="https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/download/"+arr[i].fileid
+		i=i+1
+	return arr
+
+def GetVersionList(game, category):
+	url = "https://www.curseforge.com/"+game+"/"+category
+	arr = []
+	p = __file_dl(url)
+	parser = etree.HTMLParser()
+	tree = etree.parse(__file_fake(p), parser)
+	vlist = tree.xpath("//select[@name='filter-game-version']")[0]
+	i = 0
+	vtypename = None
+	vtypeid = None
+	for version in vlist:
+		if(version.attrib.get("selected") == "selected"): continue
+		if("gameversiontype" in version.attrib.get("id")):
+			vtypename = version.text.strip()
+			vtypeid = version.attrib.get("value")
+			continue
+		arr += [CurseVersion()]
+		arr[i].typename = vtypename
+		arr[i].typeid = vtypeid
+		arr[i].name = version.text.strip()
+		arr[i].id = version.attrib.get("value")
 		i=i+1
 	return arr
 
