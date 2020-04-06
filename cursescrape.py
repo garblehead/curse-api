@@ -195,7 +195,7 @@ def GetDependencies(game, category, mod, deptype=None):
 
 # returns mod file as bytes
 def DownloadMod(game, category, mod, fileid):
-	url="https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/download"+fileid
+	url="https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/download/"+fileid
 	__file_dl(url)
 	file = __file_dl(url+"/file")
 	return file
