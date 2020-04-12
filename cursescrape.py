@@ -151,10 +151,15 @@ def GetModList(game, category, mod, versions=None):
 		arr[i].fileid = e.split('/')[5]
 		e = file[1][0].text #donot trust, no file extension typically
 		arr[i].filename = e
-		arr[i].downloadlink ="https://www.curseforge.com/"+game+"/"+category+"/"+mod+"/download/"+arr[i].fileid
 		i=i+1
 	return arr
 
+def __setnameid(typ, ver):
+	typ.name = ver.text.strip()
+	typ.id = ver.attrib.get("value")
+	return typ
+
+# returns list of versions
 def GetVersionList(game, category):
 	url = "https://www.curseforge.com/"+game+"/"+category
 	arr = []
@@ -165,20 +170,24 @@ def GetVersionList(game, category):
 	i = 0
 	j = 0
 	vtype = None
+	novtype = False
+	if("gameversiontype" not in vlist[1].attrib.get("id")): novtype = True
 	for version in vlist:
 		if(version.attrib.get("selected") == "selected"): continue
-		if("gameversiontype" in version.attrib.get("id")):
+		if(novtype):
+			arr += [CurseVersion()]
+			arr[i] = __setnameid(arr[i], version)
+			i = i + 1
+		elif("gameversiontype" in version.attrib.get("id")):
 			arr += [CurseVersionType()]
-			arr[i].name = version.text.strip()
-			arr[i].id = version.attrib.get("value")
+			arr[i] = __setnameid(arr[i], version)
 			vtype = arr[i].list
-			j=0
-			i=i+1
+			j = 0
+			i = i + 1
 		else:
 			vtype+=[CurseVersion()]
-			vtype[j].name = version.text.strip()
-			vtype[j].id = version.attrib.get("value")
-			j=j+1
+			vtype[j] = __setnameid(vtype[j], version)
+			j = j + 1
 	return arr
 
 # returns an array of mod name strings of required deps for given mod
