@@ -29,16 +29,20 @@ class CurseModInfo:
 
 class CurseMod:
 	def __init__(self):
-		self.name = "none"
-		self.game = "nada"
-		self.category = "null"
+		self.name = None
+		self.game = None
+		self.category = None
+
+class CurseVersionType:
+	def __init__(self):
+		self.name = None
+		self.id = None
+		self.list = []
 
 class CurseVersion:
 	def __init__(self):
 		self.name = None
 		self.id = None
-		self.typename = None
-		self.typeid = None
 
 # internal func
 # downloads a file to a byte stream
@@ -159,20 +163,22 @@ def GetVersionList(game, category):
 	tree = etree.parse(__file_fake(p), parser)
 	vlist = tree.xpath("//select[@name='filter-game-version']")[0]
 	i = 0
-	vtypename = None
-	vtypeid = None
+	j = 0
+	vtype = None
 	for version in vlist:
 		if(version.attrib.get("selected") == "selected"): continue
 		if("gameversiontype" in version.attrib.get("id")):
-			vtypename = version.text.strip()
-			vtypeid = version.attrib.get("value")
-			continue
-		arr += [CurseVersion()]
-		arr[i].typename = vtypename
-		arr[i].typeid = vtypeid
-		arr[i].name = version.text.strip()
-		arr[i].id = version.attrib.get("value")
-		i=i+1
+			arr += [CurseVersionType()]
+			arr[i].name = version.text.strip()
+			arr[i].id = version.attrib.get("value")
+			vtype = arr[i].list
+			j=0
+			i=i+1
+		else:
+			vtype+=[CurseVersion()]
+			vtype[j].name = version.text.strip()
+			vtype[j].id = version.attrib.get("value")
+			j=j+1
 	return arr
 
 # returns an array of mod name strings of required deps for given mod

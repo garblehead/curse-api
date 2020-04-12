@@ -6,4 +6,4 @@ import io
 
 versions = cursescrape.GetVersionList("minecraft", "mc-mods")
 for version in versions:
-	print(version.name+" t "+version.typename)
+	print(version.name+" i "+version.id)
